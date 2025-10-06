@@ -1,1 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Grade Sorter</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="wrapper">
+    <div class="card">
+      <h1 class="title">🎓 Student Grade Sorter</h1>
+      <p class="subtitle">Enter student grades, sort them, and see the distribution.</p>
 
+      <div class="input-section">
+        <label for="numStudents">Number of Students:</label>
+        <input type="number" id="numStudents" min="1" placeholder="e.g. 5">
+        <button id="generateFields" class="btn-primary">Generate Inputs</button>
+      </div>
+
+      <form id="gradeForm" class="grades-section"></form>
+
+      <div class="actions">
+        <button id="sortButton" class="btn-secondary">Sort Grades</button>
+      </div>
+
+      <div class="results">
+        <h2>📋 Sorted Grades</h2>
+        <p id="sortedOutput" class="output-box">No grades yet.</p>
+
+        <h2>📊 Grade Distribution</h2>
+        <div id="chart" class="chart"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const numInput = document.getElementById("numStudents");
+    const form = document.getElementById("gradeForm");
+    const generateBtn = document.getElementById("generateFields");
+    const sortBtn = document.getElementById("sortButton");
+    const sortedOutput = document.getElementById("sortedOutput");
+    const chart = document.getElementById("chart");
+
+    generateBtn.addEventListener("click", () => {
+      form.innerHTML = "";
+      const n = parseInt(numInput.value);
+      if (!n || n < 1) return alert("Enter a valid number of students.");
+      for (let i = 0; i < n; i++) {
+        const input = document.createElement("input");
+        input.type = "number";
+        input.min = 0;
+        input.max = 100;
+        input.placeholder = `Grade ${i + 1}`;
+        input.className = "grade-input";
+        form.appendChild(input);
+      }
+    });
+
+    sortBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const grades = Array.from(document.querySelectorAll(".grade-input"))
+        .map(input => parseInt(input.value))
+        .filter(val => !isNaN(val) && val >= 0 && val <= 100);
+
+      if (grades.length === 0) return alert("Please enter valid grades (0–100).");
+
+      const response = await fetch("/sort", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ grades })
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+
+      sortedOutput.textContent = data.sorted.join(", ");
+
+      chart.innerHTML = "";
+      data.distribution.forEach((count, i) => {
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        bar.style.height = `${count * 20}px`;
+        bar.title = `${i * 5}–${i * 5 + 4}: ${count}`;
+        chart.appendChild(bar);
+      });
+    });
+  </script>
+</body>
+</html>
